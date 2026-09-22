@@ -77,15 +77,41 @@ class ChatService:
             conversation.person = person
         person = conversation.person
         relationship = person.relationship_profile if person else None
-        user_message = Message(role="user", content=request.message, conversation=conversation)
-        self.session.add(user_message)
-        if conversation.title == "新对话":
-            conversation.title = request.message.strip().replace("\n", " ")[:32]
-        self.session.commit()
+        current_message = request.message
+        current_user_id: str | None = None
+        effective_file_ids = list(request.file_ids)
+        if request.regenerate:
+            last_user_index = next(
+                (index for index in range(len(conversation.messages) - 1, -1, -1) if conversation.messages[index].role == "user"),
+                None,
+            )
+            if last_user_index is None:
+                raise ChatNotFoundError("user message")
+            last_user = conversation.messages[last_user_index]
+            current_message = last_user.content
+            current_user_id = last_user.id
+            if not effective_file_ids and last_user.metadata_json:
+                effective_file_ids = list(last_user.metadata_json.get("file_ids") or [])
+            for old_response in conversation.messages[last_user_index + 1 :]:
+                self.session.delete(old_response)
+            self.session.commit()
+            self.session.expire(conversation, ["messages"])
+        else:
+            user_message = Message(
+                role="user",
+                content=current_message,
+                metadata_json={"file_ids": effective_file_ids} if effective_file_ids else None,
+                conversation=conversation,
+            )
+            self.session.add(user_message)
+            if conversation.title == "新对话":
+                conversation.title = current_message.strip().replace("\n", " ")[:32]
+            self.session.commit()
+            current_user_id = user_message.id
 
-        files = self._load_files(request.file_ids)
+        files = self._load_files(effective_file_ids)
         route = self.router.route(
-            request.message,
+            current_message,
             relationship_status=relationship.status if relationship else None,
             file_types=[item.mime_type for item in files],
         )
@@ -94,12 +120,12 @@ class ChatService:
         history = [
             {"role": item.role, "content": item.content}
             for item in conversation.messages
-            if item.id != user_message.id and item.role in {"user", "assistant"}
+            if item.id != current_user_id and item.role in {"user", "assistant"}
         ]
         composed = self.composer.compose(
             core_skill=self.loader.load_skill(),
             route=route,
-            user_message=request.message,
+            user_message=current_message,
             references=documents,
             person={"id": person.id, "display_name": person.display_name, "notes": person.notes}
             if person
@@ -113,7 +139,7 @@ class ChatService:
         image_files = [item for item in files if item.mime_type.startswith("image/")]
         if image_files:
             composed[-1]["content"] = [
-                {"type": "text", "text": request.message},
+                {"type": "text", "text": current_message},
                 *[
                     {
                         "type": "image_url",

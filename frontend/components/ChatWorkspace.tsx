@@ -94,6 +94,7 @@ export function ChatWorkspace() {
   async function submit(event?: FormEvent, override?: string) {
     event?.preventDefault();
     const message = (override ?? input).trim();
+    const regenerating = override !== undefined;
     if (!message || streaming || !current) return;
     setInput("");
     setError("");
@@ -110,7 +111,12 @@ export function ChatWorkspace() {
       content: "",
       created_at: new Date().toISOString(),
     };
-    setMessages((items) => [...items.filter((item) => item.id !== "greeting"), optimisticUser, optimisticAssistant]);
+    setMessages((items) => {
+      const withoutGreeting = items.filter((item) => item.id !== "greeting");
+      if (!regenerating) return [...withoutGreeting, optimisticUser, optimisticAssistant];
+      const lastUserIndex = withoutGreeting.findLastIndex((item) => item.role === "user");
+      return [...withoutGreeting.slice(0, lastUserIndex + 1), optimisticAssistant];
+    });
     const controller = new AbortController();
     abortRef.current = controller;
     try {
@@ -120,6 +126,7 @@ export function ChatWorkspace() {
           person_id: current.person_id,
           message,
           file_ids: attachments.map((file) => file.id),
+          regenerate: regenerating,
         },
         controller.signal,
         (type, data) => {

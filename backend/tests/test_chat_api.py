@@ -43,3 +43,17 @@ def test_stream_chat_emits_sse_and_persists_on_completion(client: TestClient) ->
     assert "event: done" in response.text
     detail = client.get(f"/api/conversations/{conversation['id']}").json()
     assert detail["messages"][-1]["content"] == "流式回复"
+
+    fake.content = "重新生成的回复"
+    regenerated = client.post(
+        "/api/chat/stream",
+        json={
+            "conversation_id": conversation["id"],
+            "message": "客户端显示的原问题",
+            "regenerate": True,
+        },
+    )
+    assert "event: done" in regenerated.text
+    detail = client.get(f"/api/conversations/{conversation['id']}").json()
+    assert [item["role"] for item in detail["messages"]] == ["user", "assistant"]
+    assert detail["messages"][-1]["content"] == "重新生成的回复"
