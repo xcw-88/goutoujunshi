@@ -16,6 +16,7 @@ data/
 node_modules/
 .next/
 coverage/
+*.tsbuildinfo
 
 # The raw research workspace is intentionally not part of the distributable skill.
 /恋爱知识库/
