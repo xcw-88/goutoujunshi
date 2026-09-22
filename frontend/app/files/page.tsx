@@ -19,7 +19,7 @@ export default function FilesPage() {
     if (!file) return;
     try {
       await uploadFile(file);
-      setNotice("文件仅保存在本机 data/uploads。")
+      setNotice(process.env.NEXT_PUBLIC_CLOUD_MODE === "1" ? "文件已保存在你的 Cloudflare R2 存储桶。" : "文件仅保存在本机 data/uploads。")
       await load();
     } catch (reason) { setNotice((reason as Error).message); }
   }
@@ -32,10 +32,10 @@ export default function FilesPage() {
 
   return (
     <div className="page-wrap">
-      <div className="page-heading"><div><span className="eyebrow">Local files</span><h1>文件与截图</h1><p>支持 PNG、JPG、WEBP、TXT、Markdown、JSON 和 CSV，单文件最大 20 MB。</p></div></div>
+      <div className="page-heading"><div><span className="eyebrow">Files</span><h1>文件与截图</h1><p>支持 PNG、JPG、WEBP、TXT、Markdown、JSON 和 CSV，单文件最大 20 MB。</p></div></div>
       <label className="upload-zone">
         <input type="file" accept=".png,.jpg,.jpeg,.webp,.txt,.md,.json,.csv" onChange={(event) => { void add(event.target.files?.[0]); event.target.value = ""; }} />
-        <span className="upload-icon">＋</span><strong>选择本地文件</strong><small>文件名会被替换为安全 UUID；不会上传到本应用以外的位置。</small>
+        <span className="upload-icon">＋</span><strong>选择文件</strong><small>{process.env.NEXT_PUBLIC_CLOUD_MODE === "1" ? "文件名会被替换为安全 UUID；文件上传到你的 Cloudflare R2。" : "文件名会被替换为安全 UUID；不会上传到本应用以外的位置。"}</small>
       </label>
       {notice && <p className="success-note center">{notice}</p>}
       <section className="file-grid">
@@ -50,7 +50,7 @@ export default function FilesPage() {
             <div className="file-actions"><a href={fileUrl(file.id)} target="_blank" rel="noreferrer">查看</a><button className="danger-link" onClick={() => remove(file)}>删除</button></div>
           </article>
         ))}
-        {!files.length && <div className="empty large">还没有本地文件。</div>}
+        {!files.length && <div className="empty large">还没有文件。</div>}
       </section>
     </div>
   );

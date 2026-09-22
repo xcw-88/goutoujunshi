@@ -17,6 +17,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    window.dispatchEvent(new Event("goutou:logout"));
+  }
+
   return (
     <div className="app-shell">
       <header className="mobile-header">
@@ -44,10 +49,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="privacy-note"><span>●</span> 数据仅保存在本机</div>
+        <div className="privacy-note"><span>●</span> {process.env.NEXT_PUBLIC_CLOUD_MODE === "1" ? "私人数据保存在 Cloudflare D1 / R2" : "数据仅保存在本机"}</div>
+        {process.env.NEXT_PUBLIC_CLOUD_MODE === "1" && <button className="sidebar-logout" onClick={() => void logout()}>退出登录</button>}
       </aside>
       <main className="main-content">{children}</main>
     </div>
   );
 }
-

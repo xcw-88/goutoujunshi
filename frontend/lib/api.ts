@@ -17,6 +17,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
   if (!response.ok) {
+    if (response.status === 401 && process.env.NEXT_PUBLIC_CLOUD_MODE === "1") window.dispatchEvent(new Event("goutou:unauthorized"));
     const payload = await response.json().catch(() => ({ detail: response.statusText }));
     throw new ApiError(payload.detail ?? "请求失败", response.status);
   }
@@ -36,6 +37,7 @@ export async function streamChat(
     signal,
   });
   if (!response.ok || !response.body) {
+    if (response.status === 401 && process.env.NEXT_PUBLIC_CLOUD_MODE === "1") window.dispatchEvent(new Event("goutou:unauthorized"));
     throw new ApiError("无法开始生成", response.status);
   }
   const reader = response.body.getReader();
@@ -64,6 +66,7 @@ export async function uploadFile(file: File): Promise<import("./types").Uploaded
   body.append("file", file);
   const response = await fetch(`${API_BASE}/api/files`, { method: "POST", body });
   if (!response.ok) {
+    if (response.status === 401 && process.env.NEXT_PUBLIC_CLOUD_MODE === "1") window.dispatchEvent(new Event("goutou:unauthorized"));
     const payload = await response.json().catch(() => ({ detail: "上传失败" }));
     throw new ApiError(payload.detail ?? "上传失败", response.status);
   }

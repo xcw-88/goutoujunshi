@@ -30,6 +30,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .sidebar nav a.active { box-shadow: inset 3px 0 var(--accent); }
 .privacy-note { margin-top: auto; color: #aeb4aa; font-size: 11px; padding: 12px 8px; }
 .privacy-note span { color: #86a486; margin-right: 6px; }
+.sidebar-logout { border: 1px solid #626961; border-radius: 8px; background: transparent; color: #d7d9d3; cursor: pointer; padding: 8px; margin: 0 8px; }
 .main-content { min-width: 0; min-height: 100vh; }
 .mobile-header { display: none; }
 .nav-backdrop { display: none; }
@@ -157,6 +158,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .field-help { color: var(--muted); font-size: 10px; line-height: 1.6; margin-top: -8px; }
 .privacy-box { border-left: 3px solid var(--sage); margin-top: 18px; padding: 12px 16px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .privacy-box strong { color: var(--ink); }
+.cloud-login { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.cloud-login-card { width: min(100%, 390px); padding: 30px; }
+.cloud-login-card h1 { margin: 8px 0 0; font-size: 22px; }
+.cloud-login-card p { color: var(--muted); font-size: 13px; line-height: 1.6; }
 
 @media (max-width: 880px) {
   .app-shell { display: block; }

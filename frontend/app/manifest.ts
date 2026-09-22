@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "狗头军师 · Goutoujunshi",
     short_name: "狗头军师",
-    description: "本地、隐私优先的私人关系分析助手",
+    description: process.env.NEXT_PUBLIC_CLOUD_MODE === "1" ? "私人的云端关系分析助手" : "本地、隐私优先的私人关系分析助手",
     start_url: "/",
     display: "standalone",
     background_color: "#f7f4ed",

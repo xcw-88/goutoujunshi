@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/AppShell";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { CloudAuthGate } from "@/components/CloudAuthGate";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
-      <body><ServiceWorkerRegistration /><AppShell>{children}</AppShell></body>
+      <body><ServiceWorkerRegistration /><CloudAuthGate><AppShell>{children}</AppShell></CloudAuthGate></body>
     </html>
   );
 }

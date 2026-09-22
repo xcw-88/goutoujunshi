@@ -8,6 +8,7 @@ const result = spawnSync(process.execPath, [nextCli, "build"], {
     ...process.env,
     CLOUDFLARE_BUILD: "1",
     NEXT_PUBLIC_API_BASE: "",
+    NEXT_PUBLIC_CLOUD_MODE: "1",
   },
   stdio: "inherit",
 });
