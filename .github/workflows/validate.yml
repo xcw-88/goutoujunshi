@@ -76,3 +76,12 @@ jobs:
       - name: Verify Worker and Python dependency bundle without deploying
         working-directory: cloudflare
         run: npm run deploy:dry
+      - name: Save Python Worker dependencies for Windows deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/codex/web-pwa-v1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-worker-dependencies-${{ github.sha }}
+          path: cloudflare/python_modules/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
