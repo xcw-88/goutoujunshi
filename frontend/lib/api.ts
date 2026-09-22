@@ -25,20 +25,37 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export async function apiForm<T>(path: string, body: FormData): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, { method: "POST", body });
+  if (!response.ok) {
+    if (response.status === 401 && process.env.NEXT_PUBLIC_CLOUD_MODE === "1") window.dispatchEvent(new Event("goutou:unauthorized"));
+    const payload = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new ApiError(payload.detail ?? "请求失败", response.status);
+  }
+  return response.json() as Promise<T>;
+}
+
 export async function streamChat(
   payload: Record<string, unknown>,
   signal: AbortSignal,
   onEvent: (event: string, data: Record<string, unknown>) => void,
+  files: File[] = [],
 ): Promise<void> {
+  const body = files.length ? new FormData() : undefined;
+  if (body) {
+    body.append("payload", JSON.stringify(payload));
+    files.forEach((file) => body.append("files", file));
+  }
   const response = await fetch(`${API_BASE}/api/chat/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    headers: body ? undefined : { "Content-Type": "application/json" },
+    body: body ?? JSON.stringify(payload),
     signal,
   });
   if (!response.ok || !response.body) {
     if (response.status === 401 && process.env.NEXT_PUBLIC_CLOUD_MODE === "1") window.dispatchEvent(new Event("goutou:unauthorized"));
-    throw new ApiError("无法开始生成", response.status);
+    const payload = await response.json().catch(() => ({ detail: "无法开始生成" }));
+    throw new ApiError(payload.detail ?? "无法开始生成", response.status);
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();

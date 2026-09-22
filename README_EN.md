@@ -36,7 +36,7 @@ This is more than a library of scripted replies. It can analyze chat screenshots
 
 ## Optional Web and Cloud App
 
-The repository also includes a local Web/PWA and an optional [single-Worker Cloudflare adapter](./cloudflare/README.md) using Workers Static Assets, Python FastAPI, D1, and R2. The cloud adapter has not been deployed; no private local data is migrated automatically. The original Codex Skill remains unchanged.
+The repository also includes a local Web/PWA and an optional [single-Worker Cloudflare adapter](./cloudflare/README.md) using Workers Static Assets, Python FastAPI, and D1. Cloud attachments are processed per request, without R2 or KV storage; confirmed imported chat text is saved to D1. No private local data is migrated automatically. The original Codex Skill remains unchanged.
 
 ## What It Can Help With
 

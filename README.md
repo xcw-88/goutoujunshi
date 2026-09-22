@@ -170,7 +170,7 @@ npm run build
 
 ### 可选：单 Worker 云端版
 
-仓库另提供 [Cloudflare Workers 适配与部署说明](./cloudflare/README.md)：同一个 Worker 托管静态前端和 Python FastAPI，使用 D1、R2 与 Worker Secrets。它是本地 Web/PWA 的可选部署方式，不需要 Pages，也不会自动上传本机数据。目前只完成代码和本地验证，**尚未创建或部署真实 Cloudflare 资源**；部署前必须通过 Linux 的 Python 依赖打包验证，并由使用者配置自己的云资源和密钥。
+仓库另提供 [Cloudflare Workers 适配与部署说明](./cloudflare/README.md)：同一个 Worker 托管静态前端和 Python FastAPI，使用 D1 与 Worker Secrets。云端附件按请求临时处理，不使用 R2 或 KV；导入确认后的聊天文字会保存在 D1。本地 Web/PWA 与原 Skill 不受影响。部署前应通过 Linux 的 Python 依赖打包验证。
 
 ## 它能帮你解决什么
 

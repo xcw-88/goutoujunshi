@@ -43,7 +43,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div><strong>狗头军师</strong><small>你的关系决策助手</small></div>
         </div>
         <nav>
-          {nav.map(([href, label, icon]) => (
+          {nav.filter(([href]) => process.env.NEXT_PUBLIC_CLOUD_MODE !== "1" || href !== "/files").map(([href, label, icon]) => (
             <Link
               key={href}
               href={href}
@@ -54,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="privacy-note"><span>●</span> {process.env.NEXT_PUBLIC_CLOUD_MODE === "1" ? "私人数据保存在 Cloudflare D1 / R2" : "数据仅保存在本机"}</div>
+        <div className="privacy-note"><span>●</span> {process.env.NEXT_PUBLIC_CLOUD_MODE === "1" ? "聊天文字保存在 D1；附件不保留" : "数据仅保存在本机"}</div>
         {process.env.NEXT_PUBLIC_CLOUD_MODE === "1" && <button className="sidebar-logout" onClick={() => void logout()}>退出登录</button>}
       </aside>
       <main className="main-content">{children}</main>

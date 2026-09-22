@@ -56,7 +56,7 @@ export default function SettingsPage() {
           {notice && <span className="success-note">{notice}</span>}
         </form> : <div className="empty large">正在读取设置… {notice}</div>}
       </section>
-      <section className="privacy-box"><strong>隐私提示</strong><p>{cloud ? "人物、记忆、对话保存在 Cloudflare D1，文件保存在 R2；聊天内容与截图会发送到你配置的模型服务商。部署口令并不等于端到端加密。" : "聊天内容与截图会发送到你配置的模型服务商。请根据服务商条款决定是否提交敏感资料；本应用本身不提供云同步或账号系统。"}</p></section>
+      <section className="privacy-box"><strong>隐私提示</strong><p>{cloud ? "人物、记忆、对话文字保存在 Cloudflare D1；附件只随当前请求处理，原文件不保存，但图片和附件内容会发送到你配置的模型服务商。导入确认后的聊天文字会保存。部署口令并不等于端到端加密。" : "聊天内容与截图会发送到你配置的模型服务商。请根据服务商条款决定是否提交敏感资料；本应用本身不提供云同步或账号系统。"}</p></section>
     </div>
   );
 }

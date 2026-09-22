@@ -11,6 +11,7 @@ const greeting: Message = {
   content: "你好，我是狗头军师。你可以直接讲发生了什么，我会先帮你稳住情绪，再一起分清事实、推测和下一步。",
   created_at: new Date(0).toISOString(),
 };
+const cloud = process.env.NEXT_PUBLIC_CLOUD_MODE === "1";
 
 export function ChatWorkspace() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -21,6 +22,7 @@ export function ChatWorkspace() {
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState("");
   const [attachments, setAttachments] = useState<UploadedFile[]>([]);
+  const [cloudAttachments, setCloudAttachments] = useState<File[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
   const refreshLists = useCallback(async () => {
@@ -37,6 +39,7 @@ export function ChatWorkspace() {
     const detail = await api<Conversation>(`/api/conversations/${id}`);
     setCurrent(detail);
     setMessages(detail.messages?.length ? detail.messages : [greeting]);
+    setCloudAttachments([]);
   }, []);
 
   const newConversation = useCallback(async () => {
@@ -46,6 +49,7 @@ export function ChatWorkspace() {
     });
     setCurrent(created);
     setMessages([greeting]);
+    setCloudAttachments([]);
     setConversations((items) => [created, ...items]);
   }, []);
 
@@ -125,7 +129,7 @@ export function ChatWorkspace() {
           conversation_id: current.id,
           person_id: current.person_id,
           message,
-          file_ids: attachments.map((file) => file.id),
+          file_ids: cloud ? [] : attachments.map((file) => file.id),
           regenerate: regenerating,
         },
         controller.signal,
@@ -144,9 +148,11 @@ export function ChatWorkspace() {
           }
           if (type === "error") throw new Error(String(data.detail ?? "生成失败"));
         },
+        cloud ? cloudAttachments : [],
       );
       await refreshLists();
       setAttachments([]);
+      setCloudAttachments([]);
     } catch (reason) {
       if ((reason as Error).name !== "AbortError") setError((reason as Error).message);
       setMessages((items) => items.filter((item) => item.id !== optimisticAssistant.id || item.content));
@@ -160,6 +166,11 @@ export function ChatWorkspace() {
 
   async function attach(file: File | undefined) {
     if (!file) return;
+    if (cloud) {
+      if (file.size > 20 * 1024 * 1024) { setError("单文件不能超过 20 MB"); return; }
+      setCloudAttachments((items) => [...items, file].slice(-8));
+      return;
+    }
     try {
       const uploaded = await uploadFile(file);
       setAttachments((items) => [...items, uploaded].slice(-8));
@@ -215,6 +226,7 @@ export function ChatWorkspace() {
             <button className="text-button regenerate" onClick={() => submit(undefined, lastUserMessage)}>↻ 重新生成</button>
           )}
           {!!attachments.length && <div className="attachment-row">{attachments.map((file) => <span key={file.id}>{file.original_name}<button type="button" aria-label={`移除 ${file.original_name}`} onClick={() => setAttachments((items) => items.filter((item) => item.id !== file.id))}>×</button></span>)}</div>}
+          {!!cloudAttachments.length && <div className="attachment-row">{cloudAttachments.map((file, index) => <span key={`${file.name}-${index}`}>{file.name}<button type="button" aria-label={`移除 ${file.name}`} onClick={() => setCloudAttachments((items) => items.filter((_, itemIndex) => itemIndex !== index))}>×</button></span>)}</div>}
           <form className="composer" onSubmit={submit}>
             <label className="attach-button" title="添加截图或文件">＋<input type="file" accept=".png,.jpg,.jpeg,.webp,.txt,.md,.json,.csv" onChange={(event) => { void attach(event.target.files?.[0]); event.target.value = ""; }} /></label>
             <textarea
@@ -235,7 +247,7 @@ export function ChatWorkspace() {
               <button type="submit" className="send" disabled={!input.trim()}>↑</button>
             )}
           </form>
-          <small className="composer-note">Enter 发送 · Shift + Enter 换行 · AI 建议仅供参考</small>
+          <small className="composer-note">Enter 发送 · Shift + Enter 换行 · {cloud ? "附件仅随本次请求处理，不保存在云端" : "AI 建议仅供参考"}</small>
         </div>
       </section>
     </div>

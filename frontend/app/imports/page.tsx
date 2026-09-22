@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { api, uploadFile } from "@/lib/api";
+import { api, apiForm, uploadFile } from "@/lib/api";
 import type { Person, UploadedFile } from "@/lib/types";
 
+const cloud = process.env.NEXT_PUBLIC_CLOUD_MODE === "1";
+
 type Preview = {
-  file_id: string;
   format: string;
   total_messages: number;
   senders: string[];
@@ -18,26 +19,37 @@ export default function ImportsPage() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [fileId, setFileId] = useState("");
+  const [cloudFile, setCloudFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [notice, setNotice] = useState("");
   const [completed, setCompleted] = useState(false);
 
   async function load() {
-    const [allFiles, allPeople] = await Promise.all([api<UploadedFile[]>("/api/files"), api<Person[]>("/api/people")]);
-    setFiles(allFiles.filter((file) => /\.(txt|md|json|csv)$/i.test(file.original_name)));
+    const allPeople = await api<Person[]>("/api/people");
+    if (!cloud) {
+      const allFiles = await api<UploadedFile[]>("/api/files");
+      setFiles(allFiles.filter((file) => /\.(txt|md|json|csv)$/i.test(file.original_name)));
+    }
     setPeople(allPeople);
   }
   useEffect(() => {
-    Promise.all([api<UploadedFile[]>("/api/files"), api<Person[]>("/api/people")])
-      .then(([allFiles, allPeople]) => {
-        setFiles(allFiles.filter((file) => /\.(txt|md|json|csv)$/i.test(file.original_name)));
-        setPeople(allPeople);
-      })
-      .catch(() => setNotice("无法读取本地文件"));
+    const requests = cloud
+      ? Promise.all([Promise.resolve([] as UploadedFile[]), api<Person[]>("/api/people")])
+      : Promise.all([api<UploadedFile[]>("/api/files"), api<Person[]>("/api/people")]);
+    requests.then(([allFiles, allPeople]) => {
+      setFiles(allFiles.filter((file) => /\.(txt|md|json|csv)$/i.test(file.original_name)));
+      setPeople(allPeople);
+    }).catch(() => setNotice("无法读取数据"));
   }, []);
 
   async function add(file?: File) {
     if (!file) return;
+    if (cloud) {
+      setCloudFile(file);
+      setPreview(null);
+      setNotice("");
+      return;
+    }
     const uploaded = await uploadFile(file);
     await load();
     setFileId(uploaded.id);
@@ -45,9 +57,15 @@ export default function ImportsPage() {
   }
 
   async function inspect() {
-    if (!fileId) return;
+    if (cloud ? !cloudFile : !fileId) return;
     try {
-      setPreview(await api<Preview>("/api/imports/preview", { method: "POST", body: JSON.stringify({ file_id: fileId }) }));
+      if (cloud && cloudFile) {
+        const body = new FormData();
+        body.append("file", cloudFile);
+        setPreview(await apiForm<Preview>("/api/imports/preview", body));
+      } else {
+        setPreview(await api<Preview>("/api/imports/preview", { method: "POST", body: JSON.stringify({ file_id: fileId }) }));
+      }
       setCompleted(false);
       setNotice("");
     } catch (reason) { setNotice((reason as Error).message); }
@@ -57,16 +75,23 @@ export default function ImportsPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     try {
-      const result = await api<{ conversation_id: string; imported_messages: number }>("/api/imports/confirm", {
-        method: "POST",
-        body: JSON.stringify({
-          file_id: fileId,
+      const payload = {
+          ...(cloud ? {} : { file_id: fileId }),
           user_sender: form.get("user_sender"),
           object_sender: form.get("object_sender"),
           person_id: form.get("person_id") || null,
           title: form.get("title"),
-        }),
-      });
+      };
+      let result: { conversation_id: string; imported_messages: number };
+      if (cloud && cloudFile) {
+        const body = new FormData();
+        body.append("file", cloudFile);
+        body.append("payload", JSON.stringify(payload));
+        result = await apiForm("/api/imports/confirm", body);
+      } else {
+        result = await api("/api/imports/confirm", { method: "POST", body: JSON.stringify(payload) });
+      }
+      setCloudFile(null);
       setNotice(`已导入 ${result.imported_messages} 条消息到新对话。`);
       setCompleted(true);
     } catch (reason) { setNotice((reason as Error).message); }
@@ -78,9 +103,9 @@ export default function ImportsPage() {
       <div className="import-steps">
         <section className="surface editor-card">
           <span className="step-number">01</span><h2>选择文件</h2>
-          <label className="small-upload">上传 TXT / Markdown / JSON / CSV<input type="file" accept=".txt,.md,.json,.csv" onChange={(event) => { void add(event.target.files?.[0]); event.target.value = ""; }} /></label>
-          <label>或选择已上传文件<select value={fileId} onChange={(event) => { setFileId(event.target.value); setPreview(null); }}><option value="">请选择</option>{files.map((file) => <option key={file.id} value={file.id}>{file.original_name}</option>)}</select></label>
-          <button className="primary" disabled={!fileId} onClick={inspect}>解析并预览</button>
+          <label className="small-upload">选择 TXT / Markdown / JSON / CSV<input type="file" accept=".txt,.md,.json,.csv" onChange={(event) => { void add(event.target.files?.[0]); event.target.value = ""; }} /></label>
+          {cloud ? <p>{cloudFile ? `已选择：${cloudFile.name}。文件仅在预览和确认请求中处理，不保存原文件。` : "请选择本机文件；确认导入后聊天文字会保存到 D1。"}</p> : <label>或选择已上传文件<select value={fileId} onChange={(event) => { setFileId(event.target.value); setPreview(null); }}><option value="">请选择</option>{files.map((file) => <option key={file.id} value={file.id}>{file.original_name}</option>)}</select></label>}
+          <button className="primary" disabled={cloud ? !cloudFile : !fileId} onClick={inspect}>解析并预览</button>
         </section>
         <section className="surface editor-card preview-panel">
           <span className="step-number">02</span><h2>检查解析结果</h2>

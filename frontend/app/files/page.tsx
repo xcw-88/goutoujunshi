@@ -13,7 +13,7 @@ export default function FilesPage() {
   const [notice, setNotice] = useState("");
 
   async function load() { setFiles(await api<UploadedFile[]>("/api/files")); }
-  useEffect(() => { api<UploadedFile[]>("/api/files").then(setFiles).catch(() => setNotice("无法读取文件")); }, []);
+  useEffect(() => { if (process.env.NEXT_PUBLIC_CLOUD_MODE !== "1") api<UploadedFile[]>("/api/files").then(setFiles).catch(() => setNotice("无法读取文件")); }, []);
 
   async function add(file?: File) {
     if (!file) return;
@@ -29,6 +29,12 @@ export default function FilesPage() {
     await api(`/api/files/${file.id}`, { method: "DELETE" });
     await load();
   }
+
+  if (process.env.NEXT_PUBLIC_CLOUD_MODE === "1") return (
+    <div className="page-wrap"><div className="page-heading"><div><h1>文件与截图</h1><p>云端不设文件库，也不长期保存附件。</p></div></div>
+      <section className="surface editor-card"><p>请在对话中附加图片或文件，或在导入页面选择聊天记录。原文件只在当前请求中处理；导入确认后的聊天文字会保存在 D1。</p></section>
+    </div>
+  );
 
   return (
     <div className="page-wrap">
