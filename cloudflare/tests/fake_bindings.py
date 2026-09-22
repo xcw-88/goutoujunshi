@@ -42,3 +42,25 @@ class D1Binding:
         with self.connection:
             for statement in statements:
                 self.connection.execute(statement.sql, statement.values)
+
+
+class R2Object:
+    def __init__(self, data: bytes) -> None:
+        self.data = data
+
+    async def arrayBuffer(self) -> bytes:
+        return self.data
+
+
+class R2Binding:
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+
+    async def put(self, key: str, content: bytes) -> None:
+        self.objects[key] = content
+
+    async def get(self, key: str) -> R2Object | None:
+        return R2Object(self.objects[key]) if key in self.objects else None
+
+    async def delete(self, key: str) -> None:
+        self.objects.pop(key, None)

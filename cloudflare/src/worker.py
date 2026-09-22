@@ -4,6 +4,7 @@ import sys
 from src.routes.people import router as people_router
 from src.routes.conversations import router as conversations_router
 from src.routes.memories import router as memories_router
+from src.routes.files import router as files_router
 
 
 app = FastAPI(
@@ -15,6 +16,7 @@ app = FastAPI(
 app.include_router(people_router)
 app.include_router(conversations_router)
 app.include_router(memories_router)
+app.include_router(files_router)
 
 
 @app.get("/api/health")
