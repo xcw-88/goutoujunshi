@@ -41,7 +41,11 @@ export default function FilesPage() {
       <section className="file-grid">
         {files.map((file) => (
           <article className="file-card" key={file.id}>
-            {file.mime_type.startsWith("image/") ? <img src={fileUrl(file.id)} alt={file.original_name} /> : <div className="file-type">{file.original_name.split(".").pop()?.toUpperCase()}</div>}
+            {file.mime_type.startsWith("image/") ? (
+              // Local authenticated-by-origin content should not pass through Next image optimization.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fileUrl(file.id)} alt={file.original_name} />
+            ) : <div className="file-type">{file.original_name.split(".").pop()?.toUpperCase()}</div>}
             <div><strong>{file.original_name}</strong><small>{formatSize(file.size)} · {file.mime_type}</small></div>
             <div className="file-actions"><a href={fileUrl(file.id)} target="_blank" rel="noreferrer">查看</a><button className="danger-link" onClick={() => remove(file)}>删除</button></div>
           </article>

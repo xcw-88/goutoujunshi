@@ -147,6 +147,16 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .transcript-preview p { display: grid; grid-template-columns: 75px 1fr; gap: 9px; border-bottom: 1px solid #eee8de; padding: 8px 3px; margin: 0; font-size: 11px; line-height: 1.5; }
 .transcript-preview strong { overflow: hidden; text-overflow: ellipsis; }
 .primary-link { display: inline-block; margin-top: 10px; color: var(--accent-dark); text-decoration: none; font-weight: 650; font-size: 12px; }
+.narrow-page { max-width: 850px; }
+.settings-card { padding: clamp(22px, 5vw, 38px); }
+.setting-status { display: flex; align-items: center; gap: 11px; border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 21px; }
+.setting-status strong, .setting-status small { display: block; }
+.setting-status small { color: var(--muted); font-size: 10px; margin-top: 3px; }
+.status-ok { color: #6b8a67; }.status-warn { color: #c28a35; }
+.two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.field-help { color: var(--muted); font-size: 10px; line-height: 1.6; margin-top: -8px; }
+.privacy-box { border-left: 3px solid var(--sage); margin-top: 18px; padding: 12px 16px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.privacy-box strong { color: var(--ink); }
 
 @media (max-width: 880px) {
   .app-shell { display: block; }
