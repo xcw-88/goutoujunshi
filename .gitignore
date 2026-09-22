@@ -24,6 +24,8 @@ coverage/
 .wrangler-dry-run/
 .dev.vars
 .dev.vars.*
+/cloudflare/src/app/
+/cloudflare/app/
 
 # The raw research workspace is intentionally not part of the distributable skill.
 /恋爱知识库/

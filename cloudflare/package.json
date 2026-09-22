@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "build:frontend": "npm --prefix ../frontend run build:cloudflare",
+    "sync:core": "uv run python scripts/sync_core.py",
     "dev": "uv run pywrangler dev",
-    "deploy:dry": "npm run build:frontend && wrangler deploy --dry-run --outdir .wrangler-dry-run",
-    "deploy": "npm run build:frontend && wrangler deploy"
+    "deploy:dry": "npm run build:frontend && npm run sync:core && wrangler deploy --dry-run --outdir .wrangler-dry-run",
+    "deploy": "npm run build:frontend && npm run sync:core && wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "4.136.2"
