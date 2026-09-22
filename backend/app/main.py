@@ -12,6 +12,7 @@ from app.api.chat import router as chat_router
 from app.api.conversations import router as conversations_router
 from app.api.files import router as files_router
 from app.api.health import router as health_router
+from app.api.imports import router as imports_router
 from app.api.memories import router as memories_router
 from app.api.people import router as people_router
 from app.core.database import init_database
@@ -70,4 +71,5 @@ app.include_router(people_router)
 app.include_router(conversations_router)
 app.include_router(memories_router)
 app.include_router(files_router)
+app.include_router(imports_router)
 app.include_router(chat_router)
