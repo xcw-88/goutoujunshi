@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.api.memories import router as memories_router
 from app.core.database import init_database
 from app.core.logging import configure_logging
 
@@ -17,8 +18,9 @@ configure_logging()
 logger = logging.getLogger("goutoujunshi.http")
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
-    init_database()
+async def lifespan(application: FastAPI):
+    if not getattr(application.state, "skip_database_init", False):
+        init_database()
     yield
 
 
@@ -60,3 +62,4 @@ async def log_request(
 
 
 app.include_router(health_router)
+app.include_router(memories_router)
