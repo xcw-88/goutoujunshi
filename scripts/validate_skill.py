@@ -15,6 +15,15 @@ ERRORS: list[str] = []
 SKILL_MAX_LINES = 150
 SKILL_MAX_CHARACTERS = 5_000
 SKILL_MAX_APPROX_TOKENS = 4_500
+IGNORED_DIRECTORY_NAMES = {
+    ".git",
+    ".next",
+    ".venv",
+    "venv",
+    "node_modules",
+    "coverage",
+    "data",
+}
 
 REQUIRED_KNOWLEDGE = (
     "01-证据分级与内容边界.md",
@@ -193,9 +202,20 @@ def validate_runtime_boundaries() -> None:
                 )
 
 
+def repository_files(suffixes: set[str] | None = None):
+    for path in ROOT.rglob("*"):
+        if not path.is_file():
+            continue
+        if IGNORED_DIRECTORY_NAMES.intersection(path.relative_to(ROOT).parts):
+            continue
+        if suffixes is not None and path.suffix.lower() not in suffixes:
+            continue
+        yield path
+
+
 def validate_markdown_links() -> None:
     link_pattern = re.compile(r"\]\(([^)]+)\)")
-    for markdown in ROOT.rglob("*.md"):
+    for markdown in repository_files({".md"}):
         text = markdown.read_text(encoding="utf-8")
         for raw_target in link_pattern.findall(text):
             target = raw_target.strip().split("#", 1)[0]
@@ -209,11 +229,7 @@ def validate_markdown_links() -> None:
 
 
 def validate_placeholders() -> None:
-    for path in ROOT.rglob("*"):
-        if not path.is_file() or ".git" in path.parts:
-            continue
-        if path.suffix.lower() not in {".md", ".yaml", ".yml", ".py"}:
-            continue
+    for path in repository_files({".md", ".yaml", ".yml", ".py"}):
         text = path.read_text(encoding="utf-8")
         if "[" + "TODO" in text:
             ERRORS.append(f"template placeholder in {path.relative_to(ROOT)}")
