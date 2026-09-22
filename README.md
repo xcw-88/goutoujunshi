@@ -76,6 +76,9 @@ FastAPI ── SQLAlchemy ── data/app.db
 在仓库根目录打开 PowerShell：
 
 ```powershell
+# 如果系统提示“禁止运行脚本”，仅为当前 PowerShell 窗口放行：
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
 # 后端
 cd backend
 python -m venv .venv
@@ -83,7 +86,7 @@ python -m venv .venv
 
 # 前端
 cd ..\frontend
-npm install
+npm.cmd install
 cd ..
 
 # 可选：复制环境变量示例；也可以启动后在设置页配置
@@ -121,7 +124,7 @@ GOUTOU_MAX_TOKENS=1200
 # 在运行 start.ps1 的窗口按 Ctrl+C
 ```
 
-脚本会检查 Python、Node.js、后端虚拟环境和前端依赖；缺少依赖时给出对应安装命令。运行日志写入 `data/logs/`，不会记录 API Key、完整 prompt、聊天正文或人物档案。
+`Set-ExecutionPolicy -Scope Process` 只影响当前 PowerShell 窗口，关闭窗口后自动失效，不会修改系统或用户级策略。脚本会检查 Python、Node.js、后端虚拟环境和前端依赖；缺少依赖时给出对应安装命令。运行日志写入 `data/logs/`，不会记录 API Key、完整 prompt、聊天正文或人物档案。
 
 ### 数据位置与隐私
 

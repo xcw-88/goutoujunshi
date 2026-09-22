@@ -20,7 +20,7 @@ if (-not (Test-Path -LiteralPath $backendPython)) {
     throw "Backend environment is missing. Run: cd backend; python -m venv .venv; .\.venv\Scripts\python.exe -m pip install -e '.[dev]'"
 }
 if (-not (Test-Path -LiteralPath $nodeModules)) {
-    throw "Frontend dependencies are missing. Run: cd frontend; npm install"
+    throw "Frontend dependencies are missing. Run: cd frontend; npm.cmd install"
 }
 if (-not (Test-Path -LiteralPath (Join-Path $backendDir ".env")) -and -not $env:GOUTOU_API_KEY) {
     Write-Warning "backend/.env is absent and GOUTOU_API_KEY is unset. The app will start; configure the model on the Settings page."
@@ -62,8 +62,9 @@ try {
 finally {
     foreach ($process in @($backendProcess, $frontendProcess)) {
         if ($null -ne $process -and -not $process.HasExited) {
-            $process.Kill($true)
+            # npm.cmd starts a Node.js process tree. taskkill /T prevents the
+            # Next.js child server from being orphaned when Ctrl+C is pressed.
+            & taskkill.exe /PID $process.Id /T /F 2>$null | Out-Null
         }
     }
 }
-
