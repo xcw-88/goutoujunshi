@@ -1,8 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { api, streamChat } from "@/lib/api";
-import type { Conversation, Message, Person } from "@/lib/types";
+import { api, streamChat, uploadFile } from "@/lib/api";
+import type { Conversation, Message, Person, UploadedFile } from "@/lib/types";
 import { MarkdownMessage } from "@/components/MarkdownMessage";
 
 const greeting: Message = {
@@ -20,6 +20,7 @@ export function ChatWorkspace() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState("");
+  const [attachments, setAttachments] = useState<UploadedFile[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
   const refreshLists = useCallback(async () => {
@@ -118,7 +119,7 @@ export function ChatWorkspace() {
           conversation_id: current.id,
           person_id: current.person_id,
           message,
-          file_ids: [],
+          file_ids: attachments.map((file) => file.id),
         },
         controller.signal,
         (type, data) => {
@@ -138,6 +139,7 @@ export function ChatWorkspace() {
         },
       );
       await refreshLists();
+      setAttachments([]);
     } catch (reason) {
       if ((reason as Error).name !== "AbortError") setError((reason as Error).message);
       setMessages((items) => items.filter((item) => item.id !== optimisticAssistant.id || item.content));
@@ -148,6 +150,16 @@ export function ChatWorkspace() {
   }
 
   const lastUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content;
+
+  async function attach(file: File | undefined) {
+    if (!file) return;
+    try {
+      const uploaded = await uploadFile(file);
+      setAttachments((items) => [...items, uploaded].slice(-8));
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  }
 
   return (
     <div className="chat-layout">
@@ -195,7 +207,9 @@ export function ChatWorkspace() {
           {lastUserMessage && !streaming && (
             <button className="text-button regenerate" onClick={() => submit(undefined, lastUserMessage)}>↻ 重新生成</button>
           )}
+          {!!attachments.length && <div className="attachment-row">{attachments.map((file) => <span key={file.id}>{file.original_name}<button type="button" aria-label={`移除 ${file.original_name}`} onClick={() => setAttachments((items) => items.filter((item) => item.id !== file.id))}>×</button></span>)}</div>}
           <form className="composer" onSubmit={submit}>
+            <label className="attach-button" title="添加截图或文件">＋<input type="file" accept=".png,.jpg,.jpeg,.webp,.txt,.md,.json,.csv" onChange={(event) => { void attach(event.target.files?.[0]); event.target.value = ""; }} /></label>
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}

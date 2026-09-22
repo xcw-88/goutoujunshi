@@ -1,5 +1,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000";
 
+export const fileUrl = (id: string) => `${API_BASE}/api/files/${id}/content`;
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -57,3 +59,13 @@ export async function streamChat(
   }
 }
 
+export async function uploadFile(file: File): Promise<import("./types").UploadedFile> {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch(`${API_BASE}/api/files`, { method: "POST", body });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({ detail: "上传失败" }));
+    throw new ApiError(payload.detail ?? "上传失败", response.status);
+  }
+  return response.json();
+}

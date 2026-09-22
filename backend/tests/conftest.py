@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import build_engine, get_db, init_database
 from app.main import app
+from app.core.config import Settings, get_settings
 
 
 @pytest.fixture
@@ -25,6 +26,10 @@ def client(session: Session) -> Generator[TestClient, None, None]:
         yield session
 
     app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        GOUTOU_DATABASE_PATH="test.db",
+        GOUTOU_UPLOAD_DIR=str(session.bind.url.database) + "-uploads",  # type: ignore[union-attr]
+    )
     app.state.skip_database_init = True
     with TestClient(app) as test_client:
         yield test_client

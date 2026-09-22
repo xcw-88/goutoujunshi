@@ -40,3 +40,11 @@ export type Memory = {
   updated_at: string;
 };
 
+export type UploadedFile = {
+  id: string;
+  original_name: string;
+  stored_name: string;
+  mime_type: string;
+  size: number;
+  created_at: string;
+};

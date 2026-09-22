@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+import base64
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Conversation, Message, Person
+from app.models import Conversation, Message, Person, UploadedFile
 from app.providers.base import ModelProvider, ModelResponse
 from app.schemas.chat import ChatRequest
 from app.services.memory_service import MemoryService
@@ -81,9 +83,11 @@ class ChatService:
             conversation.title = request.message.strip().replace("\n", " ")[:32]
         self.session.commit()
 
+        files = self._load_files(request.file_ids)
         route = self.router.route(
             request.message,
             relationship_status=relationship.status if relationship else None,
+            file_types=[item.mime_type for item in files],
         )
         documents = self.loader.load_references(route.references)
         memory_context = MemoryService(self.session).get_context(person.id) if person else None
@@ -106,7 +110,30 @@ class ChatService:
             memories=memory_context,
             history=history,
         )
+        image_files = [item for item in files if item.mime_type.startswith("image/")]
+        if image_files:
+            composed[-1]["content"] = [
+                {"type": "text", "text": request.message},
+                *[
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{item.mime_type};base64,{base64.b64encode(Path(item.path).read_bytes()).decode('ascii')}"
+                        },
+                    }
+                    for item in image_files
+                ],
+            ]
         return conversation, composed, route
+
+    def _load_files(self, file_ids: list[str]) -> list[UploadedFile]:
+        files: list[UploadedFile] = []
+        for file_id in file_ids:
+            item = self.session.get(UploadedFile, file_id)
+            if item is None:
+                raise ChatNotFoundError("file")
+            files.append(item)
+        return files
 
     def _save_assistant(
         self, conversation: Conversation, content: str, route: RouteDecision
@@ -126,4 +153,3 @@ class ChatService:
         self.session.commit()
         self.session.refresh(message)
         return message
-
