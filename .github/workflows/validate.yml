@@ -1,4 +1,4 @@
-name: Validate Skill
+name: Validate Skill and Web V1
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,3 +17,33 @@ jobs:
           python-version: "3.12"
       - name: Validate repository and skill
         run: python3 scripts/validate_skill.py
+      - name: Install backend
+        run: python3 -m pip install -e "./backend[dev]"
+      - name: Test backend
+        working-directory: backend
+        run: python3 -m pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npm run typecheck
+      - name: Test frontend
+        working-directory: frontend
+        run: npm test
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
