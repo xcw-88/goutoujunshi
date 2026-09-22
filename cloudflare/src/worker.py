@@ -7,6 +7,9 @@ from src.routes.people import router as people_router
 from src.routes.conversations import router as conversations_router
 from src.routes.memories import router as memories_router
 from src.routes.files import router as files_router
+from src.routes.settings import router as settings_router
+from src.routes.chat import router as chat_router
+from src.routes.imports import router as imports_router
 
 
 app = FastAPI(
@@ -20,6 +23,9 @@ app.include_router(people_router)
 app.include_router(conversations_router)
 app.include_router(memories_router)
 app.include_router(files_router)
+app.include_router(settings_router)
+app.include_router(chat_router)
+app.include_router(imports_router)
 
 
 @app.middleware("http")

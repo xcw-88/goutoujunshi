@@ -4,7 +4,7 @@ from scripts.sync_core import sync
 sync()
 
 
-def client_with_env(*, authenticate=True, **bindings):
+def client_with_env(*, authenticate=True, model_complete=None, **bindings):
     from fastapi.testclient import TestClient
     from src.worker import app
 
@@ -14,6 +14,8 @@ def client_with_env(*, authenticate=True, **bindings):
     class Wrapper:
         async def __call__(self, scope, receive, send):
             scope["env"] = type("Bindings", (), bindings)()
+            if model_complete is not None:
+                scope["model_complete"] = model_complete
             await app(scope, receive, send)
 
     client = TestClient(Wrapper(), base_url="https://testserver")
