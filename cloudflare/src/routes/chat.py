@@ -7,14 +7,14 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from src.app.schemas.chat import ChatRequest, ChatResponse
-from src.app.skill.assets import DOCUMENTS
-from src.app.skill.composer import PromptComposer
-from src.app.skill.router import SkillRouter
-from src.app.skill.types import SkillDocument
-from src.common import db, env, new_id, now, require
-from src.routes.memories import memory_context
-from src.routes.settings import values as setting_values
+from app.schemas.chat import ChatRequest, ChatResponse
+from app.skill.assets import DOCUMENTS
+from app.skill.composer import PromptComposer
+from app.skill.router import SkillRouter
+from app.skill.types import SkillDocument
+from common import db, env, new_id, now, require
+from routes.memories import memory_context
+from routes.settings import values as setting_values
 
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])

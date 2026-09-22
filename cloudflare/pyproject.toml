@@ -2,7 +2,7 @@
 name = "goutoujunshi-cloudflare"
 version = "0.1.0"
 description = "Cloudflare Workers runtime for goutoujunshi"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.13,<3.15"
 dependencies = [
   "fastapi>=0.141,<1.0",
   "python-multipart>=0.0.20,<1.0",

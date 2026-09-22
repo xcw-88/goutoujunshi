@@ -7,8 +7,8 @@ import re
 
 from fastapi import APIRouter, HTTPException, Request
 
-from src.app.schemas.imports import ImportConfirmRequest, ImportedLine, ImportPreview, ImportPreviewRequest, ImportResult
-from src.common import db, env, new_id, now
+from app.schemas.imports import ImportConfirmRequest, ImportedLine, ImportPreview, ImportPreviewRequest, ImportResult
+from common import db, env, new_id, now
 
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])

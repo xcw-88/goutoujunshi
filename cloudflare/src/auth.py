@@ -13,7 +13,7 @@ import time
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from src.common import env
+from common import env
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -58,7 +58,8 @@ async def login(payload: LoginInput, request: Request, response: Response) -> di
     expires = int(time.time()) + SESSION_SECONDS
     response.set_cookie(
         COOKIE_NAME, f"{expires}.{_signature(expires, key)}",
-        max_age=SESSION_SECONDS, path="/", httponly=True, secure=True, samesite="strict",
+        max_age=SESSION_SECONDS, path="/", httponly=True,
+        secure=request.url.hostname not in {"localhost", "127.0.0.1"}, samesite="strict",
     )
     response.headers["Cache-Control"] = "no-store"
     return {"authenticated": True}
@@ -70,7 +71,10 @@ async def session(request: Request) -> dict[str, bool]:
 
 
 @router.post("/logout")
-async def logout(response: Response) -> dict[str, bool]:
-    response.delete_cookie(COOKIE_NAME, path="/", secure=True, httponly=True, samesite="strict")
+async def logout(request: Request, response: Response) -> dict[str, bool]:
+    response.delete_cookie(
+        COOKIE_NAME, path="/", httponly=True,
+        secure=request.url.hostname not in {"localhost", "127.0.0.1"}, samesite="strict",
+    )
     response.headers["Cache-Control"] = "no-store"
     return {"authenticated": False}

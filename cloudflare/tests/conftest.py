@@ -1,12 +1,16 @@
+import sys
+from pathlib import Path
+
 from scripts.sync_core import sync
 
 
 sync()
+sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
 
 def client_with_env(*, authenticate=True, model_complete=None, **bindings):
     from fastapi.testclient import TestClient
-    from src.worker import app
+    from worker import app
 
     bindings.setdefault("GOUTOU_ACCESS_PASSWORD", "test-only-password")
     bindings.setdefault("GOUTOU_SESSION_SECRET", "test-only-session-secret-32-characters")

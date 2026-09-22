@@ -1,6 +1,6 @@
 import asyncio
 
-from src.db import Database
+from db import Database
 from tests.fake_bindings import D1Binding
 
 

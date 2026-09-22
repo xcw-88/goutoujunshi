@@ -33,8 +33,7 @@ def sync() -> None:
     for filename in SCHEMAS:
         shutil.copyfile(ROOT / "backend" / "app" / "schemas" / filename, TARGET / "schemas" / filename)
     for filename in SKILL_MODULES:
-        content = (ROOT / "backend" / "app" / "skill" / filename).read_text(encoding="utf-8")
-        (TARGET / "skill" / filename).write_text(content.replace("from app.", "from src.app."), encoding="utf-8")
+        shutil.copyfile(ROOT / "backend" / "app" / "skill" / filename, TARGET / "skill" / filename)
 
     documents = {"SKILL.md": (ROOT / "SKILL.md").read_text(encoding="utf-8")}
     for source in sorted((ROOT / "references").rglob("*.md")):

@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from src.worker import app
+from worker import app
 
 
 def test_cloudflare_health_route() -> None:

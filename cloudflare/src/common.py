@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from fastapi import HTTPException, Request
 
-from src.db import Database
+from db import Database
 
 
 def now() -> str:

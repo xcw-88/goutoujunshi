@@ -4,8 +4,8 @@ import json
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
-from src.app.schemas.memory import MemoryContext, MemoryCreate, MemoryRead, MemoryScope, MemoryUpdate
-from src.common import db, new_id, now, require
+from app.schemas.memory import MemoryContext, MemoryCreate, MemoryRead, MemoryScope, MemoryUpdate
+from common import db, new_id, now, require
 
 
 router = APIRouter(prefix="/api/memories", tags=["memories"])

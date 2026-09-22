@@ -3,7 +3,7 @@
   "name": "goutoujunshi",
   "main": "src/worker.py",
   "compatibility_date": "2026-09-22",
-  "compatibility_flags": ["python_workers", "nodejs_compat"],
+  "compatibility_flags": ["python_workers"],
   "assets": {
     "directory": "../frontend/out",
     "binding": "ASSETS",
@@ -24,6 +24,8 @@
     }
   ],
   "vars": {
+    // Never put GOUTOU_API_KEY, GOUTOU_ACCESS_PASSWORD, or GOUTOU_SESSION_SECRET here.
+    // Configure them as Worker Secrets before exposing the app.
     "GOUTOU_API_BASE": "https://api.openai.com/v1",
     "GOUTOU_MODEL": "gpt-4.1-mini",
     "GOUTOU_TEMPERATURE": "0.7",

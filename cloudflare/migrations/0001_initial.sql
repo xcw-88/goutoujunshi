@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS people (
     id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL CHECK (length(display_name) BETWEEN 1 AND 100),

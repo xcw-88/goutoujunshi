@@ -1,15 +1,15 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 import sys
 
-from src.auth import authenticated, router as auth_router
-from src.routes.people import router as people_router
-from src.routes.conversations import router as conversations_router
-from src.routes.memories import router as memories_router
-from src.routes.files import router as files_router
-from src.routes.settings import router as settings_router
-from src.routes.chat import router as chat_router
-from src.routes.imports import router as imports_router
+from auth import authenticated, router as auth_router
+from routes.people import router as people_router
+from routes.conversations import router as conversations_router
+from routes.memories import router as memories_router
+from routes.files import router as files_router
+from routes.settings import router as settings_router
+from routes.chat import router as chat_router
+from routes.imports import router as imports_router
 
 
 app = FastAPI(
@@ -17,6 +17,7 @@ app = FastAPI(
     version="0.1.0",
     docs_url=None,
     redoc_url=None,
+    openapi_url=None,
 )
 app.include_router(auth_router)
 app.include_router(people_router)
@@ -39,12 +40,8 @@ async def guard_api(request: Request, call_next):
         if path not in {"/api/health", "/api/auth/login", "/api/auth/session"}:
             try:
                 permitted = authenticated(request)
-            except Exception as exc:
-                from fastapi import HTTPException
-
-                if isinstance(exc, HTTPException):
-                    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
-                raise
+            except HTTPException as exc:
+                return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
             if not permitted:
                 return JSONResponse({"detail": "authentication required"}, status_code=401)
     response = await call_next(request)

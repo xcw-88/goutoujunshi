@@ -4,8 +4,8 @@ import json
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from src.app.schemas.conversation import ConversationCreate, ConversationDetail, ConversationRead, ConversationUpdate
-from src.common import db, new_id, now, require
+from app.schemas.conversation import ConversationCreate, ConversationDetail, ConversationRead, ConversationUpdate
+from common import db, new_id, now, require
 
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])

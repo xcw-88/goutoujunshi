@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from src.app.schemas.person import PersonCreate, PersonRead, PersonUpdate, RelationshipRead, RelationshipWrite
-from src.common import db, new_id, now, require
+from app.schemas.person import PersonCreate, PersonRead, PersonUpdate, RelationshipRead, RelationshipWrite
+from common import db, new_id, now, require
 
 
 router = APIRouter(prefix="/api/people", tags=["people"])

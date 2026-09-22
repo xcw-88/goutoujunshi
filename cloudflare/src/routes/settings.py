@@ -4,8 +4,8 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException, Request
 
-from src.app.schemas.settings import SettingsRead, SettingsUpdate
-from src.common import db, env, now
+from app.schemas.settings import SettingsRead, SettingsUpdate
+from common import db, env, now
 
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])

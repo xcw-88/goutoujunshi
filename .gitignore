@@ -26,6 +26,8 @@ coverage/
 .dev.vars.*
 /cloudflare/src/app/
 /cloudflare/app/
+/cloudflare/src/vendor/
+/cloudflare/.venv-workers/
 
 # The raw research workspace is intentionally not part of the distributable skill.
 /恋爱知识库/

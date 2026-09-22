@@ -31,6 +31,7 @@ class D1Binding:
     def __init__(self) -> None:
         self.connection = sqlite3.connect(":memory:", check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
+        self.connection.execute("PRAGMA foreign_keys = ON")
         self.connection.executescript(
             (Path(__file__).parents[1] / "migrations" / "0001_initial.sql").read_text(encoding="utf-8")
         )

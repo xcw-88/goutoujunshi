@@ -5,8 +5,8 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile, status
 
-from src.app.schemas.file import FileRead
-from src.common import db, env, new_id, now, require
+from app.schemas.file import FileRead
+from common import db, env, new_id, now, require
 
 
 router = APIRouter(prefix="/api/files", tags=["files"])
