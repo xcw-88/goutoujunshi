@@ -17,12 +17,6 @@
       "migrations_dir": "migrations"
     }
   ],
-  "r2_buckets": [
-    {
-      "binding": "UPLOADS",
-      "bucket_name": "goutoujunshi-uploads"
-    }
-  ],
   "vars": {
     // Never put GOUTOU_API_KEY, GOUTOU_ACCESS_PASSWORD, or GOUTOU_SESSION_SECRET here.
     // Configure them as Worker Secrets before exposing the app.

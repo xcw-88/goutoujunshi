@@ -6,19 +6,42 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
+from starlette.datastructures import UploadFile
 
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.skill.assets import DOCUMENTS
 from app.skill.composer import PromptComposer
 from app.skill.router import SkillRouter
 from app.skill.types import SkillDocument
-from common import db, env, new_id, now, require
+from common import db, new_id, now, require
 from routes.memories import memory_context
 from routes.settings import values as setting_values
+from transient_files import MAX_TEXT_CHARS, TransientFile, read_uploads
 
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
-MAX_IMAGE_PAYLOAD = 12 * 1024 * 1024
+
+async def _input(request: Request) -> tuple[ChatRequest, list[TransientFile]]:
+    content_type = request.headers.get("content-type", "")
+    try:
+        if content_type.startswith("multipart/form-data"):
+            form = await request.form()
+            payload = ChatRequest.model_validate_json(str(form.get("payload", "")))
+            uploads = form.getlist("files")
+            if any(not isinstance(item, UploadFile) for item in uploads):
+                raise HTTPException(400, "invalid attachments")
+            files = await read_uploads(uploads)
+        elif content_type.startswith("application/json"):
+            payload = ChatRequest.model_validate(await request.json())
+            files = []
+        else:
+            raise HTTPException(415, "expected JSON or multipart form")
+    except (ValidationError, ValueError) as exc:
+        raise HTTPException(422, "invalid chat request") from exc
+    if payload.file_ids:
+        raise HTTPException(410, "stored files are unavailable in cloud mode; select files for this request")
+    return payload, files
 
 
 def _document(path: str) -> SkillDocument:
@@ -67,7 +90,27 @@ async def _model_complete(request: Request, messages: list[dict[str, Any]]) -> t
         raise HTTPException(503, "model service returned an invalid response") from exc
 
 
-async def _prepare(request: Request, payload: ChatRequest) -> tuple[list[dict[str, Any]], Any, str, str]:
+def _attachment_content(current_text: str, files: list[TransientFile]) -> str | list[dict[str, Any]]:
+    text_parts = [current_text]
+    attachments = []
+    for item in files:
+        if item.mime_type.startswith("image/"):
+            attachments.append({"type": "image_url", "image_url": {
+                "url": f"data:{item.mime_type};base64,{base64.b64encode(item.content).decode('ascii')}"
+            }})
+        else:
+            try:
+                decoded = item.content.decode("utf-8-sig")
+            except UnicodeDecodeError as exc:
+                raise HTTPException(400, "text attachments must use UTF-8") from exc
+            text_parts.append(f"\n\n[临时附件：{item.name}]\n{decoded}")
+    model_text = "".join(text_parts)
+    if len(model_text) > MAX_TEXT_CHARS:
+        raise HTTPException(413, "text attachments exceed the cloud context limit")
+    return ([{"type": "text", "text": model_text}, *attachments] if attachments else model_text)
+
+
+async def _prepare(request: Request, payload: ChatRequest, files: list[TransientFile]) -> tuple[list[dict[str, Any]], Any, str, str]:
     database = db(request)
     conversation = require(
         await database.one("SELECT * FROM conversations WHERE id = ?", payload.conversation_id),
@@ -91,21 +134,24 @@ async def _prepare(request: Request, payload: ChatRequest) -> tuple[list[dict[st
         payload.conversation_id,
     )
     current_text = payload.message
-    file_ids = list(payload.file_ids)
     if payload.regenerate:
         last_user = next((item for item in reversed(previous) if item["role"] == "user"), None)
         if last_user is None:
             raise HTTPException(404, "user message not found")
         current_text = last_user["content"]
-        if not file_ids and last_user["metadata"]:
-            file_ids = list((json.loads(last_user["metadata"]) or {}).get("file_ids") or [])
+        if last_user["metadata"]:
+            metadata = json.loads(last_user["metadata"]) or {}
+            if (metadata.get("attachment_types") or metadata.get("file_ids")) and not files:
+                raise HTTPException(409, "reselect the original attachment before regenerating")
+        model_content = _attachment_content(current_text, files)
         await database.run(
             "DELETE FROM messages WHERE conversation_id = ? AND rowid > ?",
             payload.conversation_id, last_user["rowid"],
         )
         previous = [item for item in previous if item["rowid"] < last_user["rowid"]]
     else:
-        metadata = json.dumps({"file_ids": file_ids}) if file_ids else None
+        model_content = _attachment_content(current_text, files)
+        metadata = json.dumps({"attachment_types": [item.mime_type for item in files]}) if files else None
         await database.run(
             "INSERT INTO messages (id, conversation_id, role, content, metadata, created_at) VALUES (?, ?, 'user', ?, ?, ?)",
             new_id(), payload.conversation_id, current_text, metadata, now(),
@@ -113,13 +159,10 @@ async def _prepare(request: Request, payload: ChatRequest) -> tuple[list[dict[st
         title = current_text.strip().replace("\n", " ")[:32] if conversation["title"] == "新对话" else conversation["title"]
         await database.run("UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?", title, now(), payload.conversation_id)
 
-    files = []
-    for file_id in file_ids:
-        files.append(require(await database.one("SELECT * FROM uploaded_files WHERE id = ?", file_id), "file"))
     route = SkillRouter().route(
         current_text,
         relationship_status=relationship["status"] if relationship else None,
-        file_types=[item["mime_type"] for item in files],
+        file_types=[item.mime_type for item in files],
     )
     context = await memory_context(person["id"], request, max_chars=4000) if person else None
     composed = PromptComposer().compose(
@@ -130,21 +173,7 @@ async def _prepare(request: Request, payload: ChatRequest) -> tuple[list[dict[st
         memories=context,
         history=[{"role": item["role"], "content": item["content"]} for item in previous if item["role"] in {"user", "assistant"}],
     )
-    images = [item for item in files if item["mime_type"].startswith("image/")]
-    if sum(item["size"] for item in images) > MAX_IMAGE_PAYLOAD:
-        raise HTTPException(400, "images exceed the 12 MB cloud model payload limit")
-    if images:
-        attachments = []
-        for record in images:
-            item = await env(request).UPLOADS.get(record["object_key"])
-            if item is None:
-                raise HTTPException(404, "file content not found")
-            raw = await item.arrayBuffer()
-            content = raw.to_bytes() if hasattr(raw, "to_bytes") else bytes(raw)
-            attachments.append({"type": "image_url", "image_url": {
-                "url": f"data:{record['mime_type']};base64,{base64.b64encode(content).decode('ascii')}"
-            }})
-        composed[-1]["content"] = [{"type": "text", "text": current_text}, *attachments]
+    composed[-1]["content"] = model_content
     return composed, route, payload.conversation_id, current_text
 
 
@@ -161,8 +190,9 @@ async def _save_assistant(request: Request, conversation_id: str, content: str, 
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
-    messages, route, conversation_id, _ = await _prepare(request, payload)
+async def chat(request: Request) -> ChatResponse:
+    payload, files = await _input(request)
+    messages, route, conversation_id, _ = await _prepare(request, payload, files)
     content, usage = await _model_complete(request, messages)
     message_id = await _save_assistant(request, conversation_id, content, route)
     return ChatResponse(
@@ -172,10 +202,11 @@ async def chat(payload: ChatRequest, request: Request) -> ChatResponse:
 
 
 @router.post("/stream")
-async def stream_chat(payload: ChatRequest, request: Request) -> StreamingResponse:
+async def stream_chat(request: Request) -> StreamingResponse:
+    payload, files = await _input(request)
     async def events():
         try:
-            messages, route, conversation_id, _ = await _prepare(request, payload)
+            messages, route, conversation_id, _ = await _prepare(request, payload, files)
             yield "event: meta\ndata: " + json.dumps({
                 "conversation_id": conversation_id, "intent": route.intent,
                 "risk": route.risk, "references": list(route.references),

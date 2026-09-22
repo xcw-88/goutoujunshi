@@ -5,16 +5,31 @@ import io
 import json
 import re
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
-from app.schemas.imports import ImportConfirmRequest, ImportedLine, ImportPreview, ImportPreviewRequest, ImportResult
-from common import db, env, new_id, now
+from app.schemas.imports import ImportedLine, ImportResult
+from common import db, new_id, now
+from transient_files import read_upload
 
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 MAX_IMPORTED_MESSAGES = 5000
 MAX_TRANSCRIPT_CHARS = 200_000
 LINE_PATTERN = re.compile(r"^(?:\[(?P<timestamp>[^\]]+)\]\s*)?(?P<sender>[^:：]{1,80})[:：]\s*(?P<content>.+)$")
+
+
+class CloudImportConfirm(BaseModel):
+    user_sender: str = Field(min_length=1)
+    object_sender: str = Field(min_length=1)
+    person_id: str | None = None
+    title: str = Field(default="导入的聊天记录", min_length=1, max_length=160)
+
+    @model_validator(mode="after")
+    def distinct_senders(self) -> "CloudImportConfirm":
+        if self.user_sender == self.object_sender:
+            raise ValueError("speakers must differ")
+        return self
 
 
 def _parse_lines(text: str) -> list[ImportedLine]:
@@ -60,18 +75,9 @@ def _parse_csv(text: str) -> list[ImportedLine]:
     return result
 
 
-async def _read(request: Request, file_id: str) -> tuple[list[ImportedLine], str]:
-    record = await db(request).one("SELECT * FROM uploaded_files WHERE id = ?", file_id)
-    if record is None:
-        raise HTTPException(400, "file not found")
-    extension = "." + record["original_name"].rsplit(".", 1)[-1].lower()
-    if extension not in {".txt", ".md", ".json", ".csv"}:
-        raise HTTPException(400, "only TXT, Markdown, JSON, and CSV can be imported")
-    item = await env(request).UPLOADS.get(record["object_key"])
-    if item is None:
-        raise HTTPException(400, "file content not found")
-    raw = await item.arrayBuffer()
-    content = raw.to_bytes() if hasattr(raw, "to_bytes") else bytes(raw)
+async def _read(upload: UploadFile) -> tuple[list[ImportedLine], str]:
+    item = await read_upload(upload, text_only=True)
+    extension, content = item.extension, item.content
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
@@ -88,28 +94,30 @@ async def _read(request: Request, file_id: str) -> tuple[list[ImportedLine], str
     return lines, format_name
 
 
-@router.post("/preview", response_model=ImportPreview)
-async def preview_import(payload: ImportPreviewRequest, request: Request) -> ImportPreview:
-    lines, format_name = await _read(request, payload.file_id)
+@router.post("/preview")
+async def preview_import(file: UploadFile = File(...)) -> dict:
+    lines, format_name = await _read(file)
     senders = list(dict.fromkeys(line.sender for line in lines if line.sender != "unknown"))
-    return ImportPreview(
-        file_id=payload.file_id, format=format_name, total_messages=len(lines),
-        senders=senders, preview=lines[:20],
-    )
+    return {"format": format_name, "total_messages": len(lines), "senders": senders,
+            "preview": [line.model_dump() for line in lines[:20]], "mapping_required": True}
 
 
 @router.post("/confirm", response_model=ImportResult)
-async def confirm_import(payload: ImportConfirmRequest, request: Request) -> ImportResult:
-    lines, _ = await _read(request, payload.file_id)
+async def confirm_import(request: Request, file: UploadFile = File(...), payload: str = Form(...)) -> ImportResult:
+    try:
+        details = CloudImportConfirm.model_validate_json(payload)
+    except (ValidationError, ValueError) as exc:
+        raise HTTPException(422, "invalid import confirmation") from exc
+    lines, _ = await _read(file)
     senders = {line.sender for line in lines}
-    if payload.user_sender not in senders or payload.object_sender not in senders:
+    if details.user_sender not in senders or details.object_sender not in senders:
         raise HTTPException(400, "confirmed speakers must exist in the imported file")
-    if payload.person_id and not await db(request).one("SELECT id FROM people WHERE id = ?", payload.person_id):
+    if details.person_id and not await db(request).one("SELECT id FROM people WHERE id = ?", details.person_id):
         raise HTTPException(400, "person not found")
-    selected = [line for line in lines if line.sender in {payload.user_sender, payload.object_sender}]
+    selected = [line for line in lines if line.sender in {details.user_sender, details.object_sender}]
     transcript_lines = []
     for line in selected:
-        role = "用户" if line.sender == payload.user_sender else "对象"
+        role = "用户" if line.sender == details.user_sender else "对象"
         timestamp = f"[{line.timestamp}] " if line.timestamp else ""
         transcript_lines.append(f"{timestamp}{role}: {line.content}")
     transcript = "\n".join(transcript_lines)
@@ -119,16 +127,16 @@ async def confirm_import(payload: ImportConfirmRequest, request: Request) -> Imp
     await db(request).batch([
         (
             "INSERT INTO conversations (id, title, person_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-            (conversation_id, payload.title, payload.person_id, timestamp, timestamp),
+            (conversation_id, details.title, details.person_id, timestamp, timestamp),
         ),
         (
             "INSERT INTO messages (id, conversation_id, role, content, metadata, created_at) VALUES (?, ?, 'user', ?, ?, ?)",
             (
                 new_id(), conversation_id,
-                f"以下是用户已确认说话人映射的聊天记录。用户={payload.user_sender}；对象={payload.object_sender}。\n\n{transcript}",
+                f"以下是用户已确认说话人映射的聊天记录。用户={details.user_sender}；对象={details.object_sender}。\n\n{transcript}",
                 json.dumps({
-                    "type": "imported_chat", "file_id": payload.file_id,
-                    "user_sender": payload.user_sender, "object_sender": payload.object_sender,
+                    "type": "imported_chat",
+                    "user_sender": details.user_sender, "object_sender": details.object_sender,
                     "message_count": len(selected),
                 }, ensure_ascii=False),
                 timestamp,

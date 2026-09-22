@@ -1,1 +1,1 @@
-"""Cloudflare D1/R2 route implementations."""
+"""Cloudflare D1 routes with request-scoped file handling."""
