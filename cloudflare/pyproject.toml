@@ -1,0 +1,20 @@
+[project]
+name = "goutoujunshi-cloudflare"
+version = "0.1.0"
+description = "Cloudflare Workers runtime for goutoujunshi"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "fastapi>=0.141,<1.0",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1.0",
+  "pytest>=8.3,<9.0",
+  "workers-py",
+  "workers-runtime-sdk",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

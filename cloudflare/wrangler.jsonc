@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "goutoujunshi",
+  "main": "src/worker.py",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["python_workers", "nodejs_compat"],
+  "assets": {
+    "directory": "../frontend/out",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "goutoujunshi",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "UPLOADS",
+      "bucket_name": "goutoujunshi-uploads"
+    }
+  ],
+  "vars": {
+    "GOUTOU_API_BASE": "https://api.openai.com/v1",
+    "GOUTOU_MODEL": "gpt-4.1-mini",
+    "GOUTOU_TEMPERATURE": "0.7",
+    "GOUTOU_MAX_TOKENS": "1200"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
+  }
+}
