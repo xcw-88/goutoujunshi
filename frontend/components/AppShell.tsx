@@ -18,8 +18,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
-    window.dispatchEvent(new Event("goutou:logout"));
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      if (!response.ok && response.status !== 401) throw new Error("logout failed");
+      window.dispatchEvent(new Event("goutou:logout"));
+    } catch {
+      window.alert("退出失败，请检查网络后重试。");
+    }
   }
 
   return (

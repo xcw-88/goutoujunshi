@@ -168,6 +168,10 @@ npm run build
 - 聊天记录导入是半结构化解析，必须由用户确认双方身份，不支持破解或直接导出微信等应用数据库。
 - PWA 缓存只保存前端静态壳层，不缓存 API 私人数据，也不提供离线模型推理。
 
+### 可选：单 Worker 云端版
+
+仓库另提供 [Cloudflare Workers 适配与部署说明](./cloudflare/README.md)：同一个 Worker 托管静态前端和 Python FastAPI，使用 D1、R2 与 Worker Secrets。它是本地 Web/PWA 的可选部署方式，不需要 Pages，也不会自动上传本机数据。目前只完成代码和本地验证，**尚未创建或部署真实 Cloudflare 资源**；部署前必须通过 Linux 的 Python 依赖打包验证，并由使用者配置自己的云资源和密钥。
+
 ## 它能帮你解决什么
 
 | 你遇到的问题 | 狗头军师会怎么帮 |

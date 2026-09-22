@@ -34,6 +34,10 @@ Most relationship advice offers only two answers: “Go for it” or “Break up
 
 This is more than a library of scripted replies. It can analyze chat screenshots, exported text, and the user's account of events while preserving evidence boundaries. It can turn analysis into a message ready to send, a specific invitation, a first-date plan, or a conversation exercise that can be reviewed afterward. It is a Codex Skill for the full relationship lifecycle, designed for diverse relationships and capable of explaining the reasoning behind its advice.
 
+## Optional Web and Cloud App
+
+The repository also includes a local Web/PWA and an optional [single-Worker Cloudflare adapter](./cloudflare/README.md) using Workers Static Assets, Python FastAPI, D1, and R2. The cloud adapter has not been deployed; no private local data is migrated automatically. The original Codex Skill remains unchanged.
+
 ## What It Can Help With
 
 | Your situation | How Goutoujunshi helps |
