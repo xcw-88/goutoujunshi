@@ -34,6 +34,137 @@
 
 它不只是一个话术库。它能读取聊天截图、导出文本和用户转述，区分素材来源与事实边界；也能把分析落到一句可发送的话、一次具体邀约、第一次见面安排或一段可复盘的对话演练。它是一套覆盖恋爱全周期、面向多元关系、能够解释建议理由的 Codex Skill。
 
+## Web / PWA V1
+
+现在仓库同时提供两种互不冲突的使用方式：原有的 Codex Skill，以及复用同一份 `SKILL.md`、`references/` 和记忆语义的本地 Web/PWA。
+
+Web V1 增加了：
+
+- 支持多轮、Markdown、复制、停止和重新生成的流式聊天；
+- 可选的人物绑定、关系档案和分层长期记忆管理；
+- 聊天截图多模态输入与本地安全文件管理；
+- TXT、Markdown、JSON、CSV 聊天记录的预览、说话人确认和导入；
+- OpenAI-compatible 模型配置；
+- 响应式桌面/手机界面，以及可安装的 PWA 壳层。
+
+这是一个**本地单用户应用**：没有账号系统、没有云同步、不是服务器 SaaS，也不会自动登录、读取或操纵任何社交软件。PWA 表示网页可安装到桌面或主屏幕，不表示大模型能够离线运行。
+
+### 系统架构
+
+```text
+Next.js Web / PWA
+        │ HTTP + SSE
+        ▼
+FastAPI ── SQLAlchemy ── data/app.db
+   │             └────── data/uploads/
+   ├── Skill loader / router / prompt composer
+   ├── OpenAI-compatible provider
+   └── SKILL.md + references/（原始领域资产）
+```
+
+后端只监听 `127.0.0.1:8000`，前端开发服务器只监听 `127.0.0.1:3000`。Skill Router 每次默认只加载最相关的 1–3 份参考，不把整个知识库塞入 prompt。
+
+### 环境要求
+
+- Windows 10/11（优先支持）或常见 Linux/macOS；
+- Python 3.12 或更高版本；
+- Node.js 20.9 或更高版本；
+- 一个 OpenAI-compatible 模型接口。图片分析还要求所选模型支持 vision。
+
+### Web 安装
+
+在仓库根目录打开 PowerShell：
+
+```powershell
+# 后端
+cd backend
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+
+# 前端
+cd ..\frontend
+npm install
+cd ..
+
+# 可选：复制环境变量示例；也可以启动后在设置页配置
+Copy-Item backend\.env.example backend\.env
+```
+
+Linux/macOS 使用 `python3 -m venv .venv`、`.venv/bin/python -m pip install -e ".[dev]"` 和 `./start.sh`。
+
+### 模型配置
+
+可以在 `backend/.env` 中设置：
+
+```dotenv
+GOUTOU_API_BASE=https://api.openai.com/v1
+GOUTOU_API_KEY=
+GOUTOU_MODEL=gpt-4.1-mini
+GOUTOU_TEMPERATURE=0.7
+GOUTOU_MAX_TOKENS=1200
+```
+
+也可以在 Web 的“设置”页面修改。Base URL、模型、temperature 和 max tokens 会写入本地数据库；API Key 不写数据库，也不会由 GET API 返回原值，只在环境变量或当前后端进程内存中使用。未设置环境变量时，通过设置页输入的 Key 在后端重启后需要重新填写。
+
+### 启动与停止
+
+```powershell
+# 启动完整开发版本
+.\start.ps1
+
+# 打开
+# Web:      http://127.0.0.1:3000
+# API:      http://127.0.0.1:8000
+# API Docs: http://127.0.0.1:8000/docs
+
+# 停止
+# 在运行 start.ps1 的窗口按 Ctrl+C
+```
+
+脚本会检查 Python、Node.js、后端虚拟环境和前端依赖；缺少依赖时给出对应安装命令。运行日志写入 `data/logs/`，不会记录 API Key、完整 prompt、聊天正文或人物档案。
+
+### 数据位置与隐私
+
+```text
+data/
+├── app.db       # 人物、关系、记忆、会话和设置
+├── uploads/     # 用户主动上传的文件
+├── exports/     # 预留的本地导出目录
+└── logs/        # 仅含路由、状态、延迟等元数据
+```
+
+`data/`、`.env` 和数据库文件均被 `.gitignore` 排除。原 Codex Skill 的 `scripts/memory_store.py` 仍使用操作系统用户数据目录中的独立 `memory.sqlite3`；Web V1 不会自动读取、覆盖或迁移该私人数据库。
+
+模型请求会发送到用户配置的模型服务商。请结合该服务商的隐私条款判断是否提交敏感聊天和截图。
+
+### 开发与测试
+
+```powershell
+# Skill 静态验证
+python scripts\validate_skill.py
+
+# 后端
+cd backend
+.\.venv\Scripts\python.exe -m pytest
+
+# 前端
+cd ..\frontend
+npm test
+npm run lint
+npm run typecheck
+npm run build
+```
+
+所有后端自动化测试默认使用 `FakeModelProvider`，不会调用真实收费 API。
+
+### 已知限制
+
+- V1 仅支持单机单用户，没有身份认证；不要把端口直接暴露到公网。
+- 没有云同步、跨设备数据库同步或自动备份。
+- 图片输入依赖上游模型的 vision 能力；项目不内置 OCR。
+- 聊天记录导入是半结构化解析，必须由用户确认双方身份，不支持破解或直接导出微信等应用数据库。
+- PWA 缓存只保存前端静态壳层，不缓存 API 私人数据，也不提供离线模型推理。
+
 ## 它能帮你解决什么
 
 | 你遇到的问题 | 狗头军师会怎么帮 |
@@ -83,7 +214,7 @@
 
 <p align="center"><sub>点击图片查看完整尺寸</sub></p>
 
-## 安装
+## Codex Skill 安装
 
 将下面的安装口令发送给你使用的 AI 助手：
 
@@ -145,9 +276,14 @@ goutoujunshi/
 │   ├── knowledge/             # 关系科学与跨学科知识文档
 │   └── practical/             # 沟通、工具适配与记忆规则
 ├── documentation/             # 架构、流程与安全边界
-└── scripts/
-    ├── validate_skill.py      # 项目完整性检查
-    └── memory_store.py        # 同意门禁、限量记忆、撤销与删除
+├── scripts/
+│   ├── validate_skill.py      # 项目完整性检查
+│   └── memory_store.py        # 原 Skill 的同意门禁、限量记忆、撤销与删除
+├── backend/                   # FastAPI、SQLAlchemy、Skill Engine 与测试
+├── frontend/                  # Next.js、响应式 UI、PWA 与组件测试
+├── data/                      # 私人运行数据（Git 忽略）
+├── start.ps1                  # Windows 完整启动入口
+└── start.sh                   # Linux/macOS 启动入口
 ```
 
 ## 设计原则

@@ -2,7 +2,7 @@
 
 ## 产品概览
 
-狗头军师是一个本地 Codex Skill，由行为指令、界面元数据、按需加载的 Markdown 知识库和可选的本地记忆脚本组成。仓库不包含服务器、前端应用、账号系统或遥测；用户同意后，记忆脚本在操作系统用户数据目录创建有界SQLite文件，绝不写入仓库。
+狗头军师由两层组成：可独立安装的原 Codex Skill，以及复用同一领域资产的本地单用户 Web/PWA。Skill 继续由行为指令、界面元数据、按需加载的 Markdown 知识库和可选本地记忆脚本组成；Web 层新增 Next.js、FastAPI、SQLAlchemy 和 OpenAI-compatible Provider。两种模式都没有账号、云同步或遥测。
 
 ## 组件
 
@@ -15,12 +15,16 @@
 | 验证器 | `scripts/validate_skill.py` | 检查结构、元数据、必需文件、上下文预算、运行时边界、断链和场景覆盖 |
 | 本地记忆 | `scripts/memory_store.py` | 执行同意门禁、来源校验、精简档案、限量、撤销、暂停和硬删除 |
 | 项目文档 | `documentation/` | 记录产品意图、运行流程、权限与自动化边界 |
+| Web 后端 | `backend/` | 提供本机 HTTP/SSE、会话、人物、记忆、文件、导入和模型调用 |
+| Web 前端 | `frontend/` | 提供响应式聊天、档案管理、设置和可安装 PWA |
 
 ## 运行方式
 
 Codex 根据 Skill 描述决定是否加载 `SKILL.md`。被调用后，代理先检查是否存在已同意的本地精简档案，只读取当前对象需要的压缩上下文，再按情境读取一到数份参考文档。最终输出是建议、理由、话术、观察窗口和停止条件；Skill不直接向第三方发送消息，也不读取聊天软件数据库。
 
 `SKILL.md` 只保留核心流程、路由和安全边界，默认按问题读取 1–3 份参考。项目文档和原始研究不属于运行时安装白名单；运行时只同步 `SKILL.md`、`agents/`、`references/`、`scripts/` 以及存在时的 `assets/`。
+
+Web 后端从仓库相对路径读取这些领域资产，不复制或硬编码知识内容。Web 私人数据写入 Git 忽略的 `data/`；原 Skill CLI 记忆仍保存在操作系统用户数据目录，两者不会隐式迁移或相互覆盖。
 
 仓库运行 `python3 scripts/validate_skill.py` 校验项目与运行内容；白名单安装副本运行 `python3 scripts/validate_skill.py --runtime`，不要求项目文档存在。
 
