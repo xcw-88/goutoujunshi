@@ -1,0 +1,2 @@
+"""Goutoujunshi local web backend."""
+

@@ -3,6 +3,19 @@
 .vscode/
 __pycache__/
 *.pyc
+.venv/
+venv/
+.env
+.env.local
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Frontend dependencies and generated output
+node_modules/
+.next/
+coverage/
 
 # The raw research workspace is intentionally not part of the distributable skill.
 /恋爱知识库/
