@@ -3,21 +3,30 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Awaitable, Callable
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.core.database import init_database
 from app.core.logging import configure_logging
 
 
 configure_logging()
 logger = logging.getLogger("goutoujunshi.http")
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_database()
+    yield
+
+
 app = FastAPI(
     title="Goutoujunshi Web API",
     version="0.1.0",
     description="Local, single-user API for the goutoujunshi skill.",
+    lifespan=lifespan,
 )
 app.add_middleware(
     CORSMiddleware,
@@ -51,4 +60,3 @@ async def log_request(
 
 
 app.include_router(health_router)
-
