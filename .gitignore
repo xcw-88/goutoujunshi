@@ -27,6 +27,7 @@ coverage/
 /cloudflare/src/app/
 /cloudflare/app/
 /cloudflare/src/vendor/
+/cloudflare/python_modules/
 /cloudflare/.venv-workers/
 
 # The raw research workspace is intentionally not part of the distributable skill.
