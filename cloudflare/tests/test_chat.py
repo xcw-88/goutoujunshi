@@ -1,5 +1,7 @@
 from tests.conftest import client_with_env
 import json
+import sys
+from types import SimpleNamespace
 
 from tests.fake_bindings import D1Binding
 
@@ -67,3 +69,39 @@ def test_invalid_temporary_attachment_does_not_create_message() -> None:
         assert invalid.status_code == 400
         detail = client.get(f"/api/conversations/{conversation_id}").json()
         assert detail["messages"] == []
+
+
+def test_chat_switches_provider_secret_with_base_url(monkeypatch) -> None:
+    calls = []
+
+    class Response:
+        ok = True
+        status = 200
+
+        async def text(self):
+            return json.dumps({"choices": [{"message": {"content": "已回复"}}], "usage": {"total_tokens": 3}})
+
+    async def fake_fetch(url, **kwargs):
+        calls.append((url, kwargs))
+        return Response()
+
+    monkeypatch.setitem(sys.modules, "workers", SimpleNamespace(fetch=fake_fetch))
+    with client_with_env(
+        DB=D1Binding(), GOUTOU_API_BASE="https://api.openai.com/v1",
+        GOUTOU_MODEL="gpt-4.1-mini", GOUTOU_API_KEY="openai-secret",
+        GOUTOU_GEMINI_API_KEY="gemini-secret",
+    ) as client:
+        conversation_id = client.post("/api/conversations", json={}).json()["id"]
+        first = client.post("/api/chat", json={"conversation_id": conversation_id, "message": "你好"})
+        assert first.status_code == 200
+        assert calls[-1][0] == "https://api.openai.com/v1/chat/completions"
+        assert calls[-1][1]["headers"]["Authorization"] == "Bearer openai-secret"
+        client.patch("/api/settings", json={
+            "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+            "model": "gemini-3.8-flash",
+        })
+        second = client.post("/api/chat", json={"conversation_id": conversation_id, "message": "再说一次"})
+        assert second.status_code == 200
+        assert calls[-1][0] == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        assert calls[-1][1]["headers"]["Authorization"] == "Bearer gemini-secret"
+        assert json.loads(calls[-1][1]["body"])["model"] == "gemini-3.8-flash"

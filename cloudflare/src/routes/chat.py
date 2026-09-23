@@ -16,7 +16,7 @@ from app.skill.router import SkillRouter
 from app.skill.types import SkillDocument
 from common import db, new_id, now, require
 from routes.memories import memory_context
-from routes.settings import values as setting_values
+from routes.settings import api_key_secret, values as setting_values
 from transient_files import MAX_TEXT_CHARS, TransientFile, read_uploads
 
 
@@ -57,7 +57,7 @@ async def _model_complete(request: Request, messages: list[dict[str, Any]]) -> t
     settings = await setting_values(request)
     api_key = settings.pop("api_key")
     if not api_key:
-        raise HTTPException(503, "GOUTOU_API_KEY Worker Secret is not configured")
+        raise HTTPException(503, f"{api_key_secret(settings['base_url'])} Worker Secret is not configured")
     base_url = settings["base_url"].rstrip("/")
     if not base_url.startswith("https://"):
         raise HTTPException(503, "model base_url must use HTTPS")

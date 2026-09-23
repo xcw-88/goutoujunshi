@@ -10,12 +10,17 @@ from common import db, env, now
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 MODEL_KEYS = ("base_url", "model", "temperature", "max_tokens")
+GEMINI_HOST = "generativelanguage.googleapis.com"
 ENV_KEYS = {
     "base_url": "GOUTOU_API_BASE",
     "model": "GOUTOU_MODEL",
     "temperature": "GOUTOU_TEMPERATURE",
     "max_tokens": "GOUTOU_MAX_TOKENS",
 }
+
+
+def api_key_secret(base_url: str) -> str:
+    return "GOUTOU_GEMINI_API_KEY" if urlparse(base_url).hostname == GEMINI_HOST else "GOUTOU_API_KEY"
 
 
 async def values(request: Request) -> dict:
@@ -28,7 +33,7 @@ async def values(request: Request) -> dict:
     }
     result["temperature"] = float(result["temperature"] or 0.7)
     result["max_tokens"] = int(result["max_tokens"] or 1200)
-    result["api_key"] = str(getattr(bindings, "GOUTOU_API_KEY", ""))
+    result["api_key"] = str(getattr(bindings, api_key_secret(result["base_url"]), ""))
     return result
 
 

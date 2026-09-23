@@ -18,7 +18,7 @@
     }
   ],
   "vars": {
-    // Never put GOUTOU_API_KEY, GOUTOU_ACCESS_PASSWORD, or GOUTOU_SESSION_SECRET here.
+    // Never put GOUTOU_API_KEY, GOUTOU_GEMINI_API_KEY, GOUTOU_ACCESS_PASSWORD, or GOUTOU_SESSION_SECRET here.
     // Configure them as Worker Secrets before exposing the app.
     "GOUTOU_API_BASE": "https://api.openai.com/v1",
     "GOUTOU_MODEL": "gpt-4.1-mini",
